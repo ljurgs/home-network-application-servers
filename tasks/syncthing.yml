@@ -1,0 +1,78 @@
+---
+- name: Set fs.inotify parameters at boot time
+  template:
+    src: 90-syncthing.conf.j2
+    dest: /etc/sysctl.d/90-syncthing.conf
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Create the syncthing data root
+  file:
+    path: "{{ syncthing_data_root }}"
+    owner: "{{ syncthing_user }}"
+    group: "{{ syncthing_user }}"
+    mode: 0700
+    state: directory
+
+- name: Create a symbolic link to the syncthing data root
+  file:
+    src: "{{ syncthing_data_root }}"
+    dest: "{{ syncthing_data_root_link }}"
+    owner: "{{ syncthing_user }}"
+    group: "{{ syncthing_user }}"
+    state: link
+
+- name: Create the syncthing config root
+  file:
+    path: "{{ syncthing_config_root }}"
+    owner: "{{ syncthing_user }}"
+    group: "{{ syncthing_user }}"
+    mode: 0700
+    state: directory
+
+- name: Create a symbolic link to the syncthing config root
+  file:
+    src: "{{ syncthing_config_root }}"
+    dest: "{{ syncthing_config_root_link }}"
+    owner: "{{ syncthing_user }}"
+    group: "{{ syncthing_user }}"
+    state: link
+
+- name: Add the syncthing repo gpg key
+  copy:
+    src: files/syncthing-keyring.gpg
+    dest: /usr/share/keyrings/syncthing-archive-keyring.gpg
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Install the syncthing apt list file
+  template:
+    src: syncthing.list.j2
+    dest: /etc/apt/sources.list.d/syncthing.list
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Reload the systemd daemon
+  shell:
+    cmd: systemctl daemon-reload
+
+- name: Update apt
+  apt:
+    update_cache: True
+
+- name: Install syncthing apt packages
+  apt:
+    name: "{{ syncthing_apt_packages }}"
+    state: latest
+
+- name: Reread systemd configuration
+  command: systemctl daemon-reload
+
+- name: Enable the syncthing systemd unit for the syncthing user
+  command: "systemctl enable syncthing@{{ syncthing_user }}.service"
+
+- name: Start the syncthing systemd unit for the syncthing user
+  command: "systemctl start syncthing@{{ syncthing_user }}.service"

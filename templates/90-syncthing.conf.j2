@@ -1,0 +1,6 @@
+#jinja2: trim_blocks: "true", lstrip_blocks: "true"
+{{ ansible_managed | comment }}
+
+# The following values allow syncthing to watch for folder changes.
+
+fs.inotify.max_user_watches=524288

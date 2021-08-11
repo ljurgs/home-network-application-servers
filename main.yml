@@ -1,0 +1,158 @@
+---
+- name: Initalize home network application servers
+  hosts: servers
+
+  vars_files:
+    - vars/general.yml
+
+  collections:
+    - devsec.hardening
+
+  pre_tasks:
+    - name: Test if systemd-journal persistent logging is enabled
+      stat:
+        path: /var/log/journal
+        get_checksum: False
+      register: journal_stat
+
+    - name: Prefer systemd-journal persistent logging
+      file:
+        path: /var/log/journal
+        state: directory
+        owner: root
+        group: systemd-journal
+        mode: '2755'
+      when: not journal_stat.stat.exists
+
+    - name: Reload the journald systemd logger
+      command: systemctl restart systemd-journald
+      when: not journal_stat.stat.exists
+
+    - name: Update apt
+      apt:
+        update_cache: True
+
+    - name: Configure openssh-server to prevent root logins
+      debconf:
+        name: openssh-server
+        question: openssh-server/permit-root-login
+        value: 'false'
+        vtype: select
+
+    - name: Configure openssh-server to prevent password based logins
+      debconf:
+        name: openssh-server
+        question: openssh-server/password-authentication
+        value: 'false'
+        vtype: select
+
+    - name: Install general apt packages
+      apt:
+        name: "{{ base_apt_packages }}"
+        state: latest
+
+  roles:
+    - ssh_hardening
+    - ljurgs.fix_debian_errors
+
+  tasks:
+    - name: Run io tuning tasks
+      include_tasks: tasks/io-tuning.yml
+
+    - name: Partition, format and mount disks
+      include_tasks: tasks/mounts.yml
+      loop: "{{ mounts }}"
+
+    - name: Allow SSH in UFW
+      ufw:
+        rule: allow
+        name: SSH
+
+    - name: Set firewall default policy
+      ufw:
+        state: enabled
+        policy: reject
+
+
+
+- name: Setup samba hosts
+  hosts: samba
+
+  vars_files:
+    - vars/samba.yml
+
+  tasks:
+    - name: Run samba related tasks
+      include_tasks: tasks/samba.yml
+
+    - name: Allow Samba in UFW
+      ufw:
+        rule: allow
+        name: Samba
+
+  handlers:
+    - name: restart samba
+      shell: systemctl restart nmbd; systemctl restart smbd
+
+
+
+- name: Setup mariadb hosts
+  hosts: mariadb
+
+  vars_files:
+    - vars/mariadb.yml
+
+  roles:
+    - geerlingguy.mysql
+
+
+
+- name: Setup plex hosts
+  hosts: plex
+
+  vars_files:
+    - vars/plex.yml
+
+  tasks:
+    - name: Run plex related tasks
+      include_tasks: tasks/plex.yml
+
+    - name: Allow plex in UFW
+      block:
+        - ufw:
+            rule: allow
+            port: '3005'
+            proto: tcp
+        - ufw:
+            rule: allow
+            port: '8324'
+            proto: tcp
+        - ufw:
+            rule: allow
+            port: '32400'
+            proto: tcp
+        - ufw:
+            rule: allow
+            port: '5353'
+            proto: udp
+        - ufw:
+            rule: allow
+            port: 32410:32414
+            proto: udp
+
+
+
+- name: Setup syncthing hosts
+  hosts: syncthing
+
+  vars_files:
+    - vars/syncthing.yml
+
+  tasks:
+    - name: Run syncthing related tasks
+      include_tasks: tasks/syncthing.yml
+
+    - name: Allow syncthing in UFW
+      ufw:
+        rule: allow
+        name: syncthing

@@ -1,0 +1,58 @@
+- name: Install samba apt packages
+  apt:
+    name: "{{ samba_apt_packages }}"
+    state: latest
+
+- name: Create filesharing user
+  user:
+    name: "{{ share_owner }}"
+    home: "{{ share_root }}"
+    create_home: False
+    system: True
+    shell: '/usr/sbin/nologin'
+  register: filesharing
+
+- name: Create the the groups that correspond to the shares
+  group:
+    name: "{{ item }}_share"
+    system: True
+  loop: "{{ shares }}"
+
+- name: Create the share root
+  file:
+    path: "{{ share_root }}"
+    owner: "{{ share_owner }}"
+    group: "{{ share_owner }}"
+    mode: 0755
+    state: directory
+  loop: "{{ shares }}"
+
+- name: Create the shares with the correct ACLs
+  file:
+    path: "{{ share_root }}/{{ item }}"
+    owner: "{{ share_owner }}"
+    group: "{{ item }}_share"
+    mode: 02770
+    state: directory
+  loop: "{{ shares }}"
+
+- name: Create the share users and set their share groups
+  include_tasks: create-share-users.yml
+  loop: "{{ share_users | dict2items }}"
+
+- name: Get the interface name for this machine
+  shell: "ip -o link | grep -i '{{ mac_address }}' | cut -d' ' -f2 | sed 's/:/ /'"
+  register: samba_interface_check
+
+- name: Set the interface name var
+  set_fact:
+    samba_interface: "{{ samba_interface_check.stdout }}"
+
+- name: Install the samba configuration file
+  template:
+    src: smb.conf.j2
+    dest: /etc/samba/smb.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart samba

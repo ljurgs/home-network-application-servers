@@ -1,0 +1,9 @@
+---
+base_apt_packages:
+  - apt-transport-https
+  - qemu-guest-agent
+  - ssh
+  - ufw
+  - parted
+  - ethtool
+  - htop

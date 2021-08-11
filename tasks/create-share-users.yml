@@ -1,0 +1,38 @@
+---
+- name: Initialize an empty user_share_groups list
+  set_fact:
+    user_share_groups: []
+
+- name: Create the list of groups that the user {{ item.key }} is a member of to access their share list
+  set_fact:
+    user_share_groups: "{{ user_share_groups + [ user_share + '_share' ] }}"
+  loop: "{{ item.value.shares }}"
+  loop_control:
+    loop_var: user_share
+
+- name: Create the {{ item.key }} user group
+  group:
+    name: "{{ item.key }}"
+
+- name: Create the {{ item.key }} share user
+  user:
+    name: "{{ item.key }}"
+    group: "{{ item.key }}"
+    groups: "{{ user_share_groups }}"
+    append: True
+    shell: '/bin/bash'
+    skeleton: '/etc/skel'
+    createhome: True
+
+- name: Determine if the coresponding samba user already exists
+  shell: "pdbedit -L | grep '^{{ item.key }}:'"
+  register: samba_user_check
+  ignore_errors: True
+
+- name: Create the samba user {{ item.key }} (with a password) if it does not already exist
+  shell: "(echo '{{ item.value.password }}'; echo '{{ item.value.password }}') | smbpasswd -s -a {{ item.key }}"
+  when: item.value.password != False and samba_user_check.rc == 1
+
+- name: Create the samba user {{ item.key }} (without a password) if it does not already exist
+  shell: "(echo ''; echo '') | smbpasswd -s -a {{ item.key }}"
+  when: item.value.password == False and samba_user_check.rc == 1

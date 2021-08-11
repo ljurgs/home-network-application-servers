@@ -1,0 +1,32 @@
+---
+- name: "Create a partition table on /dev/{{ item.dev }}"
+  parted:
+    label: "{{ item.label }}"
+    device: "/dev/{{ item.dev }}"
+    number: "{{ item.number }}"
+    name: "{{ item.name }}"
+    part_start: "{{ item.part_start }}"
+    part_end: "{{ item.part_end }}"
+    state: present
+
+- name: "Create a filesystem on /dev/{{ item.dev }}{{ item.number }}"
+  filesystem:
+    fstype: "{{ item.fstype }}"
+    dev: "/dev/{{ item.dev }}{{ item.number }}"
+    force: False
+
+- name: "Get the UUID of /dev/{{ item.dev }}{{ item.number }}"
+  shell: "blkid /dev/{{ item.dev }}{{ item.number }} -o value | head -1"
+  register: data_uuid
+
+- name: "Create {{ item.mount_point }}"
+  file:
+    path: "{{ item.mount_point }}"
+    state: directory
+
+- name: "Mount /dev/{{ item.dev }}{{ item.number }} at {{ item.mount_point }}"
+  mount:
+    path: "{{ item.mount_point }}"
+    src: UUID={{ data_uuid.stdout }}
+    fstype: ext4
+    state: mounted

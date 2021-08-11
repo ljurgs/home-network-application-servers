@@ -1,0 +1,5 @@
+#jinja2: trim_blocks: "true", lstrip_blocks: "true"
+{{ ansible_managed | comment }}
+
+[Service]
+Environment="PLEX_MEDIA_SERVER_APPLICATION_SUPPORT_DIR={{ plex_home }}/Library/Application Support"

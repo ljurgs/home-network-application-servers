@@ -1,0 +1,36 @@
+#jinja2: trim_blocks: "true", lstrip_blocks: "true"
+{{ ansible_managed | comment }}
+
+[global]
+interfaces = lo {{ samba_interface }}
+bind interfaces only = yes
+protocol = SMB3
+workgroup = WORKGROUP
+netbios name = {{ samba_netbios_name }}
+server string = Samba server %v
+access based share enum = yes
+smb encrypt = mandatory
+min receivefile size = 16384
+use sendfile = yes
+aio read size = 1
+aio write size = 1
+strict allocate = yes
+hide files = /lost+found/$RECYCLE.BIN/_SYNCAPP/desktop.ini/.DS_Store/.stfolder/.stversions
+
+
+ {% for share in shares -%}
+[{{ share }}]
+comment = {{ share }}
+path = {{ share_root }}/{{ share }}
+force user = {{ share_owner }}
+force group = {{ share + '_share' }}
+valid users = @{{ share + '_share' }}
+writable = yes
+read only = no
+create mask = 0660
+directory mask = 770
+inherit permissions = yes
+guest ok = no
+
+
+{% endfor %}

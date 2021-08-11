@@ -1,0 +1,7 @@
+#!/bin/sh
+
+for virt_disk in /sys/block/vd*
+do
+	echo 4 > "$virt_disk/queue/nr_requests";
+	echo 256 > "$virt_disk/queue/read_ahead_kb";
+done

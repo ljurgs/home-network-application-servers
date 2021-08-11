@@ -1,0 +1,7 @@
+---
+collections:
+  - devsec.hardening
+
+roles:
+  - ljurgs.fix_debian_errors
+  - geerlingguy.mysql
