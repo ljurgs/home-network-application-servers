@@ -51,10 +51,6 @@
 - name: Reload the systemd daemon
   command: systemctl daemon-reload
 
-- name: Update apt
-  apt:
-    update_cache: True
-
 - name: Install plex apt packages
   apt:
     name: "{{ plex_apt_packages }}"

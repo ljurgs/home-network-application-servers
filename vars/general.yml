@@ -7,3 +7,5 @@ base_apt_packages:
   - parted
   - ethtool
   - htop
+  - sysstat
+  - iotop

@@ -59,10 +59,6 @@
   shell:
     cmd: systemctl daemon-reload
 
-- name: Update apt
-  apt:
-    update_cache: True
-
 - name: Install syncthing apt packages
   apt:
     name: "{{ syncthing_apt_packages }}"
